@@ -1,0 +1,7 @@
+(((((((((((((((((((((((((((((((( L i S P ))))))))))))))))))))))))))))))))
+ These file were likely influenced by code that accompanied the book:
+     LISP Implantation Semantique Programmation (InterEditions, France)
+ By Christian Queinnec <Christian.Queinnec@INRIA.fr>
+ Newest version may be retrieved from:
+      http://www-spi.lip6.fr:~queinnec/Books/LiSP-2ndEdition.tgz
+(((((((((((((((((((((((((((((((( L i S P ))))))))))))))))))))))))))))))))
