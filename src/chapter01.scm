@@ -273,7 +273,7 @@
 
 
 ;; This is our chapter's main entry-point that brings up a really simple REPL.
-(define (chapter1-scheme)
+(define (chapter01-scheme)
   (define (toplevel)
     (display (evaluate (read) env.global))
     (toplevel))
