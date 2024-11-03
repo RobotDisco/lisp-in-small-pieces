@@ -275,6 +275,15 @@
 ;; This is our chapter's main entry-point that brings up a really simple REPL.
 (define (chapter01-scheme)
   (define (toplevel)
-    (display (evaluate (read) env.global))
-    (toplevel))
+    (display "LiSP> ")
+    (let ((input (read)))
+      (if (equal? input '(unquote quit))
+	  (begin (display "Bye.")
+		 (newline))
+	  (begin
+	    (display (evaluate input env.global))
+	    (newline)
+	    (toplevel)))))
+  (display "Welcome to Gaelan's Lisp. Use ,quit to quit.")
+  (newline)
   (toplevel))
