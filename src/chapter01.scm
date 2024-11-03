@@ -54,8 +54,8 @@
 	;; You're an (anonymous) function definition.
 	((lambda) (make-function (cadr expr) (cddr expr) env))
 	;; Use the standard evaluate form, invoke the function associated with
-	;; the first symbok, applied to the arguments that follow.
-	(else (invoke (evaluate expr env)
+	;; the first symbol, applied to the arguments that follow.
+	(else (invoke (evaluate (car expr) env)
 		      (evlis (cdr expr) env))))))
 
 
@@ -157,7 +157,7 @@
 	     ;; by recursively extending the existing environment with the
 	     ;; remaining ids and values.
 	     (cons (cons (car ids) (car values))
-		   (extend env (cdr ids (cdr values))))
+		   (extend env (cdr ids) (cdr values)))
 	     ;; There are still IDs but no values, error on mismatching lists
 	     (wrong "Too few values compared to variable list"))
 	 ;; Is the ID list empty?
