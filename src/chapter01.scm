@@ -55,8 +55,23 @@
 	((lambda) (make-function (cadr expr) (cddr expr) env))
 	;; Use the standard evaluate form, invoke the function associated with
 	;; the first symbol, applied to the arguments that follow.
-	(else (invoke (evaluate (car expr) env)
-		      (evlis (cdr expr) env))))))
+	(else
+	 (let ((fn (car expr))
+	       (args (evlis (cdr expr) env)))
+	   (begin
+	     ;; Exercise 1.1: Rudimentary tracer
+	     ;; Print the function name and the arguments
+	     (display (list "FN-ENTER:" fn "args:" args))
+	     (newline)
+	     (let
+		 ;; Call the function and supply the arguments
+		 ((res (invoke (evaluate (car expr) env)
+			       args)))
+	       ;; Exercise 1.1: Rudimentary tracer
+	       ;; Print the function name and the result
+	       (display (list "FN-EXIT:" fn "result:" res))
+	       (newline)
+	       res)))))))
 
 
 ;; An arbitrary value we use to represend false in our home-made Scheme dialect
@@ -275,14 +290,21 @@
 ;; This is our chapter's main entry-point that brings up a really simple REPL.
 (define (chapter01-scheme)
   (define (toplevel)
+    ;; A nice prompt, just to make me feel better than an empty line,
     (display "LiSP> ")
+    ;; We are going to do some preprocessing.
+    ;; The Read of the recursive REPL loop.
     (let ((input (read)))
+      ;; What's the simplest way to recognize a sequence so I can quit before
+      ;; evaluating?
       (if (equal? input '(unquote quit))
 	  (begin (display "Bye.")
 		 (newline))
 	  (begin
+	    ;; THe Evaluate and Print section of the REPL loop.
 	    (display (evaluate input env.global))
 	    (newline)
+	    ;; Here our REPL leans on tail recursion to Loop.
 	    (toplevel)))))
   (display "Welcome to Gaelan's Lisp. Use ,quit to quit.")
   (newline)
