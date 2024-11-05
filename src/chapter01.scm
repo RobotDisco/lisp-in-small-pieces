@@ -111,10 +111,17 @@
 (define (evlis exprs env)
   ;; Does our list contain a value?
   (if (pair? exprs)
-      ;; Evaluate the first expression, and then recursively evaluate the rest
-      ;; of the list.
-      (cons (evaluate (car exprs) env)
-	    (evlis (cdr exprs) env))
+
+      ;; Exercise 1.2 - Remove an unnecessary recursion if there is only one
+      ;; item in the list of expressions to evaluate.
+      (if (eq (cdr exprs) '())
+	  ;; The cdr of exors is an empty list, we can just return an empty list
+	  ;; as the cdr instead of doing a useless recursive call.
+	  (cons (evaluate (car exprs) env) '())
+	  ;; Evaluate the first expression, and then recursively evaluate the
+	  ;; rest of the list.
+	  (cons (evaluate (car exprs) env)
+		(evlis (cdr exprs) env)))
       ;; Otherwise, just return an empty list.
       '()))
 
