@@ -114,7 +114,7 @@
 
       ;; Exercise 1.2 - Remove an unnecessary recursion if there is only one
       ;; item in the list of expressions to evaluate.
-      (if (eq (cdr exprs) '())
+      (if (eq? (cdr exprs) '())
 	  ;; The cdr of exors is an empty list, we can just return an empty list
 	  ;; as the cdr instead of doing a useless recursive call.
 	  (cons (evaluate (car exprs) env) '())
@@ -197,6 +197,88 @@
 	 ;; The justification seems to be because we might be handed an improper
 	 ;; list, one that doesn't have nil/'() as the last value.
 	 ((symbol? ids) (cons (cons variables values) env)))))
+
+;;; Ex 1.3
+;;; Given a extend definition of:
+(define (extend env names values)
+  (cons (cons names values) env))
+;;; Lookup would have to look like:
+(define (lookup id env)
+  ;; does our env list have another entry?
+  (if (pair? env)
+      ;; Yes, the car contains the variable IDs and the rest of the list
+      ;; contains the variable values.
+      (let curr ((ids (caar env))
+		 (values (cdar env)))
+	;; Is the id list just a symbol (i.e. last item in an improper list?)
+	(cond ((symbol? ids)
+	       (if (eq? ids id)
+		   ;; if so, if the input ID equals it, return the value.
+		   values
+		   ;; if not, move to the next entry in the environment list.
+		   (lookup id (cdr env))))
+	      ;; If the current ID list is null, move to the next entry in the
+	      ;; environment list.
+	      ((null? ids) (lookup id (cdr env)))
+	      ;; If the id list isn't a symbol or null, it must be a list
+	      ;; Is the first entry of the ID list the one we want?
+	      ((eq? (car ids) id)
+	       ;; If so, make sure we have a corresponding value.
+	       (if (pair? values)
+		   ;; And return it
+		   (car values)
+		   ;; Otherwise, we have an invalid env list entry.
+		   (wrong "Too few values compared to variable list." env)))
+	      ;; If we haven't found our ID we still have values left
+	      (else (if (pair? values)
+			;; Look up next id and value in our current env entry
+			(curr (cdr ids) (cdr values))
+			;; If we don't have any values left, our env is invalid
+			(wrong "Too few values compared to variable list." env)))))
+      ;; If our env list is empty, there was no such binding.
+      (wrong "No such variable binding exists: " env)))
+;;; update! would have to look like
+;;; TODO handle inproper lists
+(define (update! id env value)
+  ;; does our env list have another entry?
+  (if (pair? env)
+      ;; Yes, the car contains the variable IDs and the rest of the list
+      ;; contains the variable values.
+      (let curr ((ids (caar env))
+		 (values (cdar env)))
+	;; Is the id list just a symbol (i.e. last item in an improper list?)
+	;; If the current ID list is null, move to the next entry in the
+	;; environment list.
+	(cond ((null? ids) (update! id (cdr env) value))
+	      ;; If the id list isn't a symbol or null, it must be a list
+	      ;; Is the first entry of the ID list the one we want?
+	      ((eq? (car ids) id)
+	       ;; If so, make sure we have a corresponding value.
+	       (if (pair? values)
+		   ;; And update it
+		   (begin
+		     (set-car! values value)
+		     env)
+		   ;; Otherwise, we have an invalid env list entry.
+		   (wrong "Too few values compared to variable list.")))
+	      ;; If we haven't found our ID we still have values left
+	      (else (if (pair? values)
+			;; This is a bit of a hack; if our environment entry
+			;; ends with an improper list, then convert it into a
+			;; proper list as I can't figure out how to do a mutation
+			;; otherwise.
+			(if (symbol? (cdr ids))
+			    (begin
+			      (set-cdr! ids (list (cdr ids)))
+			      (set-cdr! values (list (cdr values)))
+			      (curr (cdr ids) (cdr values)))
+			    ;; Otherwise, just look up next id and value in
+			    ;; current env entry
+			    (curr (cdr ids) (cdr values)))
+			;; If we don't have any values left, our env is invalid
+			(wrong "Too few values compared to variable list.")))))
+      ;; If our env list is empty, there was no such binding.
+      (wrong "No such variable binding exists: " id)))
 
 
 ;; This is the apply-equivalent for our scheme dialiect
