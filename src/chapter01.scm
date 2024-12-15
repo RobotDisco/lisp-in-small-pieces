@@ -373,8 +373,14 @@
 (defprimitive set-cdr! set-cdr! 2)
 (defprimitive + + 2)
 (defprimitive eq? eq? 2)
-(defprimitive < < 2)
-
+;; Ex 1.5 - Don't just return the host platform's boolean value, use
+;; the custom boolean values we have invented.
+;; Ye original defprimitive
+;; (defprimitive < < 2)
+(defprimitive < (lambda (a b)
+		  (if (< a b)
+		      (evaluate 't env.global)
+		      (evaluate 'f env.global))) 2)
 
 ;; This is our chapter's main entry-point that brings up a really simple REPL.
 (define (chapter01-scheme)
@@ -390,7 +396,7 @@
 	  (begin (display "Bye.")
 		 (newline))
 	  (begin
-	    ;; THe Evaluate and Print section of the REPL loop.
+	    ;; The Evaluate and Print section of the REPL loop.
 	    (display (evaluate input env.global))
 	    (newline)
 	    ;; Here our REPL leans on tail recursion to Loop.
