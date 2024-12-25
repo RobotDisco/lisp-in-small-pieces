@@ -65,7 +65,7 @@
 	     (newline)
 	     (let
 		 ;; Call the function and supply the arguments
-		 ((res (invoke (evaluate (car expr) env)
+		 ((res (invoke (evaluate fn env)
 			       args)))
 	       ;; Exercise 1.1: Rudimentary tracer
 	       ;; Print the function name and the result
@@ -286,6 +286,7 @@
 ;; fn - Function to call
 ;; args - arguments to apply
 (define (invoke fn args)
+  (display (list "FN-IN:" fn "args:" args))
   ;; Are you a recognized procedure in the host scheme runtime?
   (if (procedure? fn)
       ;; Apply the function to the supplied arguments
@@ -381,6 +382,36 @@
 		  (if (< a b)
 		      (evaluate 't env.global)
 		      (evaluate 'f env.global))) 2)
+;; Ex 1.6 - Implement (list)
+;; This relies on "implicit dot notation":
+;; (lambda arg arg) returns the whole argument list, compared to
+;; (lambda (arg) arg) which assumes a single value
+;;
+;; We're using definitial instead of defprimitive to not deal with the arity
+;; checking; I don't know how to check a variable-arity primitive.
+;;
+;; Notice how I'm not using the straightforward function definitino but an apply
+;; This is because ... say we evaluate `(list 1 2 3 foo 5)'
+;; Our evaluate line will take the car of expr, which is 'list. It will evaluate
+;; it and get back a lambda value to invoke.
+;;
+;; It will pass the remaining values in the list `(1 2 3 foo 5)' to (evlis)
+;; which will run through the list and substitute foo for a real value ... let's
+;; say we get an argument list back which is `(1 2 3 4 5)' based on the
+;; environment.
+;; OK, so now we invoke ... (invoke (lambda () ...) (1 2 3 4 5))
+;; -> ((lambda args args) (1 2 3 4 5))
+;; -> ((lambda ((1 2 3 4 5)) ((1 2 3 4 5))))
+;; -> ((1 2 3 4 5))
+;;
+;; By using 'apply, we use a macro to flatten the single list argument into
+;; the list of arguments itself rather than treating it like a single element
+;; in the argument list that is itself a list.
+;; -> (apply (lambda args args) (1 2 3 4 5))
+;; -> ((lambda (1 2 3 4 5) (1 2 3 4 5)))
+;; -> (1 2 3 4 5)
+(definitial list
+  (apply (lambda lst lst) values))
 
 ;; This is our chapter's main entry-point that brings up a really simple REPL.
 (define (chapter01-scheme)
