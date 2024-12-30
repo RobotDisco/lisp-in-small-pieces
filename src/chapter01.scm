@@ -12,15 +12,45 @@
 ;;;; reusing the host implementations.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Exercise 1.7
+;; Trivial continuation - return result as-is
+(define (trivial-cont (val) val))
+
 ;; Home-made evaluator, leaniing heavily on host Scheme implemntation.
 ;; expr - Expression to evaluate
 ;; env - Environment to inherit
-(define (evaluate expr env)
+;; Exercise 1.7: Implement call-with-current continuation i.e. `call/cc'.
+;;   Continuations are scheme's way of doing things like exception handling,
+;;   although in truth they are more generic and almost as powerful as GOTO
+;;   without being as unregulated (there's at least _some_ control of how the)
+;;   computation jumps work. The way this happens is that the evaluate function
+;;   uses something called "continuation-passing-style", which means that
+;;   alongside the current environment bindings, we also pass into evaluate a
+;;   callback-like function (called the current continuation) that we apply to
+;;   the result of our current evaluation. When using a primitive like "call/cc",
+;;   we can change what the current continuation is. This allows us to set up
+;;   things like exception handlers, or some people use them to implement
+;;   generators.
+;;
+;;   As far as I call tell this is what happens when you have minimal syntax and
+;;   need to expicitly extend lambda calculus evaluation rules to implement
+;;   something like an exception i.e. breaking out the normal evaluation flow.
+;;   Although in this case we literally have to modify our evaluation logic
+;;   to support the capability by _always_ passing our evaluation result to
+;;   our current continuation and supplying a really trivial starting
+;;   continuation (i.e. return the value as is unmodified) to start.
+;;
+;;   A REALLY WEIRD TWIST about continuations is that we're not relying at all
+;;   on a return value ... we're using `cont' as a callback, essentially, and
+;;   it is what will be returning the final value ultimately.
+;; cont - The current continuation i.e. the remainder of the program after this
+;;     point. Basically a callback to apply to our evaluation result thus far.
+(define (evaluate expr env cont)
   ;; We're not a composite / list-based expression.
   (if (atom? expr)
       (cond
        ;; Are we a variable? Well then, see if we have an associated value.
-       ((symbol? expr) (lookup expr env))
+       ((symbol? expr) (cont (lookup expr env)))
        ;; Are we a primitive atom? OK then, auto-unquote to get the real value.
        ((or (number? expr)
 	    (string? expr)
@@ -28,7 +58,7 @@
 	    (boolean? expr)
 	    (vector? expr))
 	;; Autounquoting is basically returning the expr as-is.
-	expr)
+	(cont expr))
        ;; This is an invalid atom expression.
        (else (wrong "Cannot evaluate expression" expr)))
       ;; OK I guess we are a list-based expression.
@@ -37,16 +67,18 @@
 	;; We start by looking at all the special forms, with special evaluation
 	;; behaviour.
 	;; You're a quoted list, so just return the next item.
-	((quote) (cadr expr))
+	((quote) (cont (cadr expr)))
 	;; You're a conditional, so evaluate the test condition, then evaluate
 	;; and return the appropriate branch.
 	;;
 	;; Note that we match to our language dialect's false value, using
 	;; eq? as our false value is a singleton value, so comparing memory
 	;; location of the values makes sense.
-	((if) (if (not (eq? (evaluate (cadr expr) env) the-false-value))
-		  (evaluate (caddr expr) env)
-		  (evaluate (cadddr expr) env)))
+	((if) (if (not (eq? (evaluate (cadr expr)
+				      env
+				      trivial-cont) the-false-value))
+		  (evaluate (caddr expr) env cont)
+		  (evaluate (cadddr expr) env cont)))
 	;; You're a begin/progn, a sequence of expressions to run.
 	((begin) (eprogn (cdr expr) env))
 	;; You're a mutation, which is a side-effect.
@@ -85,7 +117,8 @@
 ;; empty list.
 ;; exprs - Expresions to evaluate
 ;; env - Envirornment to inherit
-(define (eprogn exprs env)
+;; cont - current continuation
+(define (eprogn exprs env cont)
   ;; Are we a list of expressions?
   (if (pair? exprs)
       ;; Do we have an additional expression after this first one?
@@ -95,13 +128,21 @@
 	  ;;
 	  ;; Note that the (begin) we use here is part of the host scheme
 	  ;; implementation.
-	  (begin (evaluate (car exprs) env)
-		 (eprogn (cdr exprs) env))
+	  ;;(begin (evaluate (car exprs) env)
+	  ;;	 (eprogn (cdr exprs) env))
+	  ;; Ex 1.7 continuation-based eprogn
+	  (evaluate (car exprs env
+			 ;; Continue evaluation in function which ignores
+			 ;; previous values and evaluates the remaining s-exprs.
+			 (lambda _ (eprogn (cdr exprs) env))))
 	  ;; We're at the last expression in the list, so return the value of
 	  ;; its evaluation.
-	  (evaluate (car exprs) env))
+	  ;; Ex 1.7 -- Since this is our final value, apply our current
+	  ;; continuation to the result
+	  (evaluate (car exprs) env cont))
       ;; We weren't a list so we must have been an empty list, so return that.
-      '()))
+      ;; Or for Ex 1.7 -- apply our current continuation to the empty list.
+      (cont '())))
 
 
 ;; Utility function that takes a list of expressions and returns the
@@ -428,7 +469,9 @@
 		 (newline))
 	  (begin
 	    ;; The Evaluate and Print section of the REPL loop.
-	    (display (evaluate input env.global))
+	    ;; Note that we supply a starting continuation to just return the
+	    ;; evaluated value as-is.
+	    (display (evaluate input env.global trivial-cont))
 	    (newline)
 	    ;; Here our REPL leans on tail recursion to Loop.
 	    (toplevel)))))
